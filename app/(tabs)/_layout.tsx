@@ -31,7 +31,7 @@ export default function TabLayout() {
         options={{
           title: "Today",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol size={28} name="person.fill" color={color} />
           ),
         }}
       />
@@ -40,7 +40,7 @@ export default function TabLayout() {
         options={{
           title: "Routine",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol size={28} name="calendar" color={color} />
           ),
         }}
       />
@@ -49,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: "About",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol size={28} name="book.fill" color={color} />
           ),
         }}
       />

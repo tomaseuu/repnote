@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
   stepContainer2: {
     gap: 30,
     marginTop: 10,
+    marginBottom: 20,
     alignItems: "center",
   },
 });

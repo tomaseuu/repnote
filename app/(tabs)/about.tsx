@@ -1,114 +1,83 @@
-import { Image } from "expo-image";
-import { Platform, StyleSheet } from "react-native";
-
-import { ExternalLink } from "@/components/external-link";
+import RedPanda from "@/assets/images/red-panda.svg";
+import { ThemedButton } from "@/components/themed-button";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Collapsible } from "@/components/ui/collapsible";
-import { Fonts } from "@/constants/theme";
+import { router } from "expo-router";
+import { StyleSheet } from "react-native";
 
-export default function TabTwoScreen() {
+export default function AboutScreen() {
   return (
-    <>
+    <ThemedView style={styles.container}>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}
-        >
-          About
+        <ThemedText type="title">About</ThemedText>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">
+          a simple way to begin your gym journey
         </ThemedText>
       </ThemedView>
-      <ThemedText>
-        This app includes example code to help you get started.
-      </ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText>{" "}
-          and{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
+      <ThemedView style={styles.imageContainer}>
+        <RedPanda />
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer2}>
+        <ThemedText type="subtitle" style={styles.centerText}>
+          RepNote is a simple workout planner I made for myself.
         </ThemedText>
-        <ThemedText>
-          The layout file in{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{" "}
-          sets up the tab navigator.
+
+        <ThemedText type="subtitle" style={styles.centerText}>
+          Most gym apps felt overcomplicated, and I just wanted a fast way to
+          access my weekly workouts and see what I am doing today!
         </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the
-          web version, press <ThemedText type="defaultSemiBold">w</ThemedText>{" "}
-          in the terminal running this project.
+
+        <ThemedText type="subtitle" style={styles.centerText}>
+          No social features. No charts. Just the basics to stay consistent at
+          the gym.
         </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the{" "}
-          <ThemedText type="defaultSemiBold">@2x</ThemedText> and{" "}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to
-          provide files for different screen densities
+
+        <ThemedText type="subtitle" style={styles.centerText}>
+          - Thomas Le
         </ThemedText>
-        <Image
-          source={require("@/assets/images/react-logo.png")}
-          style={{ width: 100, height: 100, alignSelf: "center" }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{" "}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook
-          lets you inspect what the user&apos;s current color scheme is, and so
-          you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{" "}
-          <ThemedText type="defaultSemiBold">
-            components/HelloWave.tsx
-          </ThemedText>{" "}
-          component uses the powerful{" "}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{" "}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The{" "}
-              <ThemedText type="defaultSemiBold">
-                components/ParallaxScrollView.tsx
-              </ThemedText>{" "}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </>
+      </ThemedView>
+
+      <ThemedButton
+        title="Create/Edit Workout"
+        onPress={() => router.push("/routine")}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: "#808080",
-    bottom: -90,
-    left: -35,
-    position: "absolute",
+  container: {
+    flex: 1,
   },
   titleContainer: {
-    flexDirection: "row",
+    flexDirection: "column",
+    alignItems: "center",
     gap: 8,
+    paddingTop: 100,
+  },
+  stepContainer: {
+    gap: 10,
+    marginTop: 5,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  imageContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepContainer2: {
+    gap: 20,
+    marginTop: -20,
+    alignItems: "center",
+    paddingHorizontal: 24,
+    maxWidth: 380,
+    alignSelf: "center",
+  },
+  centerText: {
+    textAlign: "center",
   },
 });

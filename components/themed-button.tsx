@@ -32,4 +32,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
     borderWidth: 1,
   },
+  buttonText: {
+    fontSize: 20,
+    fontWeight: "200",
+  },
 });

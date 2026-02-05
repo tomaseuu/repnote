@@ -3,23 +3,35 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
 } from "react-native";
 
+import { getDayPlan, setDayPlan } from "@/lib/routineStorage";
+
 import AddIcon from "@/assets/images/add.svg";
 import MinusIcon from "@/assets/images/minus.svg";
 
 type Workout = {
   id: string;
+  name: string;
   setsReps: string;
   weights: string;
 };
+
+const DEFAULT_WORKOUTS: Workout[] = [
+  { id: "w1", name: "", setsReps: "", weights: "" },
+  { id: "w2", name: "", setsReps: "", weights: "" },
+  { id: "w3", name: "", setsReps: "", weights: "" },
+  { id: "w4", name: "", setsReps: "", weights: "" },
+];
 
 const formatSetsReps = (input: string) => {
   const trimmed = input.trim();
@@ -47,22 +59,42 @@ const formatWeightLbs = (input: string) => {
 };
 
 export default function DayScreen() {
+  const [isRestDay, setIsRestDay] = useState(false);
+
   const bg = useThemeColor({}, "background");
   const MAX_WORKOUTS = 15;
 
   const { day } = useLocalSearchParams<{ day: string }>();
   const title = day ? day.charAt(0).toUpperCase() + day.slice(1) : "Day";
 
-  const [workouts, setWorkouts] = useState<Workout[]>([
-    { id: "w1", setsReps: "", weights: "" },
-    { id: "w2", setsReps: "", weights: "" },
-    { id: "w3", setsReps: "", weights: "" },
-    { id: "w4", setsReps: "", weights: "" },
-  ]);
+  const [workouts, setWorkouts] = useState<Workout[]>(DEFAULT_WORKOUTS);
+
+  useEffect(() => {
+    if (!day) return;
+
+    (async () => {
+      const key = day.toLowerCase();
+      const plan = await getDayPlan(key);
+
+      setIsRestDay(plan.rest);
+      if (plan.workouts.length > 0) {
+        setWorkouts(
+          plan.workouts.map((w) => ({
+            id: w.id,
+            name: w.name ?? "",
+            setsReps: w.setsReps ?? "",
+            weights: w.weights ?? "",
+          })),
+        );
+      } else {
+        setWorkouts(DEFAULT_WORKOUTS);
+      }
+    })();
+  }, [day]);
 
   const updateWorkout = (
     index: number,
-    key: "setsReps" | "weights",
+    key: "name" | "setsReps" | "weights",
     value: string,
   ) => {
     setWorkouts((prev) => {
@@ -85,11 +117,15 @@ export default function DayScreen() {
         );
         return prev;
       }
-      return [...prev, { id: `w${Date.now()}`, setsReps: "", weights: "" }];
+      return [
+        ...prev,
+        { id: `w${Date.now()}`, name: "", setsReps: "", weights: "" },
+      ];
     });
   };
 
-  const onSave = () => {
+  const onSave = async () => {
+    // validate formats
     for (let i = 0; i < workouts.length; i++) {
       const s = workouts[i].setsReps;
       const w = workouts[i].weights;
@@ -110,89 +146,130 @@ export default function DayScreen() {
       }
     }
 
-    router.push("/routine");
+    if (!day) return;
+
+    const key = day.toLowerCase();
+
+    // remove totally empty workouts
+    const cleaned = workouts.filter((x) => {
+      const hasName = x.name.trim() !== "";
+      const hasSetsReps = x.setsReps.trim() !== "";
+      const hasWeights = x.weights.trim() !== "";
+      return hasName || hasSetsReps || hasWeights;
+    });
+
+    await setDayPlan(key, {
+      rest: false,
+      workouts: cleaned,
+    });
+
+    setIsRestDay(false);
+    // go back to routine + tell it what to highlight
+    router.replace({
+      pathname: "/(tabs)/routine",
+      params: { highlight: key },
+    });
   };
 
   return (
-    <ScrollView
-      style={[styles.scroll, { backgroundColor: bg }]}
-      contentContainerStyle={styles.container}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={80}
     >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Chosen Day</ThemedText>
-        <ThemedText type="title" style={styles.dayText}>
-          {title}
+      <ScrollView
+        style={[styles.scroll, { backgroundColor: bg }]}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <ThemedView style={styles.titleContainer}>
+          <ThemedText type="title">Chosen Day</ThemedText>
+          <ThemedText type="title" style={styles.dayText}>
+            {title}
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedText type="subtitle" style={styles.subtitle}>
+          input your workout and then hit save!
         </ThemedText>
-      </ThemedView>
 
-      <ThemedText type="subtitle" style={styles.subtitle}>
-        input your workout and then hit save!
-      </ThemedText>
+        {isRestDay && (
+          <ThemedText type="subtitle" style={{ textAlign: "center" }}>
+            (Saved as a rest day)
+          </ThemedText>
+        )}
 
-      <ThemedView style={styles.workoutList}>
-        {workouts.map((w, index) => (
-          <ThemedView key={w.id} style={styles.workoutBlock}>
-            <ThemedView style={styles.leftCol}>
-              <Pressable
-                onPress={() => removeWorkout(index)}
-                style={styles.iconBtn}
-              >
-                <MinusIcon width={28} height={28} />
-              </Pressable>
+        <ThemedView style={styles.workoutList}>
+          {workouts.map((w, index) => (
+            <ThemedView key={w.id} style={styles.workoutBlock}>
+              <ThemedView style={styles.leftCol}>
+                <Pressable
+                  onPress={() => removeWorkout(index)}
+                  style={styles.iconBtn}
+                >
+                  <MinusIcon width={28} height={28} />
+                </Pressable>
 
-              <ThemedText type="subtitle">{`Workout #${index + 1}`}</ThemedText>
+                <TextInput
+                  value={w.name}
+                  onChangeText={(t) => updateWorkout(index, "name", t)}
+                  placeholder={`Workout #${index + 1}`}
+                  placeholderTextColor="#7a7a7a"
+                  style={[styles.input, { width: 140 }]}
+                />
+              </ThemedView>
+
+              <ThemedView style={styles.rightCol}>
+                <TextInput
+                  value={w.setsReps}
+                  onChangeText={(t) => updateWorkout(index, "setsReps", t)}
+                  onBlur={() => {
+                    const formatted = formatSetsReps(w.setsReps);
+                    if (formatted === null) {
+                      Alert.alert(
+                        "Format",
+                        "Sets x reps should look like: 9 x 8",
+                      );
+                      return;
+                    }
+                    updateWorkout(index, "setsReps", formatted);
+                  }}
+                  placeholder="(sets x reps)"
+                  placeholderTextColor="#7a7a7a"
+                  style={styles.input}
+                />
+
+                <TextInput
+                  value={w.weights}
+                  onChangeText={(t) => updateWorkout(index, "weights", t)}
+                  onBlur={() => {
+                    const formatted = formatWeightLbs(w.weights);
+                    if (formatted === null) {
+                      Alert.alert(
+                        "Format",
+                        "Weight should be a number like 10 or 15.5",
+                      );
+                      return;
+                    }
+                    updateWorkout(index, "weights", formatted);
+                  }}
+                  placeholder="weights"
+                  placeholderTextColor="#7a7a7a"
+                  style={styles.input}
+                  keyboardType="numeric"
+                />
+              </ThemedView>
             </ThemedView>
+          ))}
+        </ThemedView>
 
-            <ThemedView style={styles.rightCol}>
-              <TextInput
-                value={w.setsReps}
-                onChangeText={(t) => updateWorkout(index, "setsReps", t)}
-                onBlur={() => {
-                  const formatted = formatSetsReps(w.setsReps);
-                  if (formatted === null) {
-                    Alert.alert(
-                      "Format",
-                      "Sets x reps should look like: 9 x 8",
-                    );
-                    return;
-                  }
-                  updateWorkout(index, "setsReps", formatted);
-                }}
-                placeholder="(sets x reps)"
-                placeholderTextColor="#7a7a7a"
-                style={styles.input}
-              />
+        <Pressable onPress={addWorkout} style={styles.addButton}>
+          <AddIcon width={36} height={36} />
+        </Pressable>
 
-              <TextInput
-                value={w.weights}
-                onChangeText={(t) => updateWorkout(index, "weights", t)}
-                onBlur={() => {
-                  const formatted = formatWeightLbs(w.weights);
-                  if (formatted === null) {
-                    Alert.alert(
-                      "Format",
-                      "Weight should be a number like 10 or 15.5",
-                    );
-                    return;
-                  }
-                  updateWorkout(index, "weights", formatted);
-                }}
-                placeholder="weights"
-                placeholderTextColor="#7a7a7a"
-                style={styles.input}
-                keyboardType="numeric"
-              />
-            </ThemedView>
-          </ThemedView>
-        ))}
-      </ThemedView>
-
-      <Pressable onPress={addWorkout} style={styles.addButton}>
-        <AddIcon width={36} height={36} />
-      </Pressable>
-
-      <ThemedButton title="Save" onPress={onSave} style={styles.saveButton} />
-    </ScrollView>
+        <ThemedButton title="Save" onPress={onSave} style={styles.saveButton} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

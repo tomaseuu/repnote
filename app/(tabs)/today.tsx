@@ -1,9 +1,11 @@
+import RedPanda from "@/assets/images/red-panda.svg";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import ConfettiCannon from "react-native-confetti-cannon";
 
 import { DayPlan, getDayPlan } from "@/lib/routineStorage";
 import {
@@ -31,26 +33,116 @@ export default function TodayScreen() {
   const [plan, setPlan] = useState<DayPlan>({ rest: false, workouts: [] });
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
 
+  // "checklist" or "congrats"
+  const [mode, setMode] = useState<"checklist" | "congrats">("checklist");
+
+  // confetti trigger
+  const [confettiKey, setConfettiKey] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   useFocusEffect(
     useCallback(() => {
-      (async () => {
-        const p = await getDayPlan(todayKey);
-        setPlan(p);
+      let alive = true;
 
+      (async () => {
+        setLoading(true);
+
+        const p = await getDayPlan(todayKey);
         const ids = await getCheckedIdsForToday(todayKey);
+
+        if (!alive) return;
+
+        setPlan(p);
         setCheckedIds(ids);
+
+        const done = p.workouts.length > 0 && ids.length === p.workouts.length;
+        setMode(done ? "congrats" : "checklist");
+
+        setLoading(false);
       })();
+
+      return () => {
+        alive = false;
+      };
     }, [todayKey]),
   );
 
   const checkedSet = useMemo(() => new Set(checkedIds), [checkedIds]);
   const hasWorkouts = plan.workouts.length > 0;
+  const isRest = plan.rest;
+
+  const allDone = hasWorkouts && checkedIds.length === plan.workouts.length;
 
   const onToggle = async (workoutId: string) => {
     const next = await toggleCheckedForToday(todayKey, workoutId);
     setCheckedIds(next);
+
+    const total = plan.workouts.length;
+    const nowDone = total > 0 && next.length === total;
+
+    // if they JUST completed the last one → confetti + switch view
+    if (nowDone && !allDone) {
+      setConfettiKey((k) => k + 1);
+      setMode("congrats");
+    }
   };
 
+  if (loading) {
+    return <ThemedView style={[styles.fullScreen, { backgroundColor: bg }]} />;
+  }
+
+  // congrats view
+  if (mode === "congrats" && allDone) {
+    return (
+      <ThemedView style={[styles.fullScreen, { backgroundColor: bg }]}>
+        {/* confetti */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <ConfettiCannon
+            key={confettiKey}
+            count={140}
+            origin={{ x: 0, y: 0 }}
+            fadeOut
+            fallSpeed={260}
+            explosionSpeed={420}
+          />
+          <ConfettiCannon
+            key={`r-${confettiKey}`}
+            count={140}
+            origin={{ x: 390, y: 0 }}
+            fadeOut
+            fallSpeed={260}
+            explosionSpeed={420}
+          />
+        </View>
+
+        {/* back button
+        <Pressable
+          onPress={() => setMode("checklist")}
+          style={styles.backBtn}
+          hitSlop={10}
+        >
+          <ThemedText style={styles.backText}>‹ Back</ThemedText>
+        </Pressable> */}
+
+        {/* centered content */}
+        <View style={styles.congratsCenter}>
+          <ThemedText style={styles.woohoo}>WOOHOO!!!</ThemedText>
+
+          <ThemedText style={styles.subtitle}>
+            You completed your{"\n"}workout for
+          </ThemedText>
+
+          <ThemedText style={styles.day}>{todayName}!</ThemedText>
+
+          <View style={styles.pandaWrap}>
+            <RedPanda />
+          </View>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  // checklist
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: bg }}
@@ -64,8 +156,12 @@ export default function TodayScreen() {
       </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
-        {!hasWorkouts ? (
-          <ThemedText type="subtitle">
+        {isRest ? (
+          <ThemedText type="subtitle" style={styles.emptyStateText}>
+            today is a rest day!
+          </ThemedText>
+        ) : !hasWorkouts ? (
+          <ThemedText type="subtitle" style={styles.emptyStateText}>
             you have not input any workouts for the day!
           </ThemedText>
         ) : (
@@ -76,7 +172,7 @@ export default function TodayScreen() {
       </ThemedView>
 
       <ThemedView style={styles.stepContainer2}>
-        {!hasWorkouts
+        {isRest || !hasWorkouts
           ? null
           : plan.workouts.map((w) => {
               const checked = checkedSet.has(w.id);
@@ -164,5 +260,63 @@ const styles = StyleSheet.create({
   },
   workoutText: {
     fontWeight: "600",
+  },
+
+  // congrats
+  fullScreen: { flex: 1 },
+
+  backBtn: {
+    position: "absolute",
+    top: 60,
+    left: 18,
+    zIndex: 10,
+  },
+  backText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#2b2b2b",
+  },
+
+  congratsCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+
+  woohoo: {
+    fontSize: 44,
+    fontWeight: "800",
+    lineHeight: 48,
+    marginBottom: 12,
+    color: "#09100D",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 32,
+    textAlign: "center",
+    lineHeight: 38,
+    fontWeight: "500",
+    color: "#09100D",
+    marginBottom: 8,
+  },
+  day: {
+    fontSize: 40,
+    marginTop: 4,
+    lineHeight: 50,
+    color: "#7E89B8",
+    fontWeight: "800",
+  },
+  pandaWrap: {
+    marginTop: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyStateText: {
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 36,
+    marginTop: 200,
   },
 });
